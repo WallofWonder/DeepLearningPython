@@ -231,7 +231,9 @@ class Network(object):
             delta_nabla_b, delta_nabla_w = self.backprop(x, y)
             nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
             nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
-        self.weights = [(1-eta*(lmbda/n))*w-(eta/len(mini_batch))*nw  # 相比于network.py 加入L2正则化
+        # self.weights = [(1-eta*(lmbda/n))*w-(eta/len(mini_batch))*nw  # 相比于network.py 加入L2正则化
+        #                 for w, nw in zip(self.weights, nabla_w)]
+        self.weights = [w - eta * (lmbda / n) * np.sign(w) - (eta / len(mini_batch)) * nw  # 相比于network.py 加入L1正则化
                         for w, nw in zip(self.weights, nabla_w)]
         self.biases = [b-(eta/len(mini_batch))*nb
                        for b, nb in zip(self.biases, nabla_b)]
@@ -318,7 +320,9 @@ class Network(object):
             # !!!注意这里的 convert 用法和 accuracy 的相反!!!
             if convert: y = vectorized_result(y)
             cost += self.cost.fn(a, y)/len(data)
-            cost += 0.5*(lmbda/len(data))*sum(np.linalg.norm(w)**2 for w in self.weights) # '**' - to the power of.
+            # cost += 0.5*(lmbda/len(data))*sum(np.linalg.norm(w)**2 for w in self.weights) # '**' - to the power of. L2
+            cost += 0.5*(lmbda/len(data))*sum(np.linalg.norm(w) for w in self.weights) # L1
+
         return cost
 
     def save(self, filename):
