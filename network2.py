@@ -181,6 +181,7 @@ class Network(object):
 
             print("Epoch %s training complete" % j)
 
+            # 根据度量值标记，选择计算并打印需要监视的度量值
             if monitor_training_cost:
                 cost = self.total_cost(training_data, lmbda)
                 training_cost.append(cost)
@@ -199,6 +200,8 @@ class Network(object):
                 print("Accuracy on evaluation data: {} / {}".format(self.accuracy(evaluation_data), n_data))
 
             # Early stopping:
+            # 如果最近的 no_accuracy_change 次迭代中准确度没有变得更高，
+            # 且 no_accuracy_change 到达了阈值（early_stopping_n），则提前停止学习
             if early_stopping_n > 0:
                 if accuracy > best_accuracy:
                     best_accuracy = accuracy
@@ -228,7 +231,7 @@ class Network(object):
             delta_nabla_b, delta_nabla_w = self.backprop(x, y)
             nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
             nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
-        self.weights = [(1-eta*(lmbda/n))*w-(eta/len(mini_batch))*nw
+        self.weights = [(1-eta*(lmbda/n))*w-(eta/len(mini_batch))*nw  # 相比于network.py 加入L2正则化
                         for w, nw in zip(self.weights, nabla_w)]
         self.biases = [b-(eta/len(mini_batch))*nb
                        for b, nb in zip(self.biases, nabla_b)]
@@ -250,7 +253,7 @@ class Network(object):
             activation = sigmoid(z)
             activations.append(activation)
         # backward pass
-        delta = (self.cost).delta(zs[-1], activations[-1], y)
+        delta = (self.cost).delta(zs[-1], activations[-1], y)  # 见书本P59-问题
         nabla_b[-1] = delta
         nabla_w[-1] = np.dot(delta, activations[-2].transpose())
         # Note that the variable l in the loop below is used a little
@@ -288,7 +291,8 @@ class Network(object):
         representations speeds things up.  More details on the
         representations can be found in
         mnist_loader.load_data_wrapper.
-
+        训练集中y是以one-hot向量形式存在，所以要用 np.argmax(y) 获取真正的y值
+        而验证集和测试集的y是正常的数值
         """
         if convert:
             results = [(np.argmax(self.feedforward(x)), np.argmax(y))
@@ -310,6 +314,8 @@ class Network(object):
         cost = 0.0
         for x, y in data:
             a = self.feedforward(x)
+            # 如果是验证集或者是测试集，要向量化 y，原因见 accuracy 函数的中文注解
+            # !!!注意这里的 convert 用法和 accuracy 的相反!!!
             if convert: y = vectorized_result(y)
             cost += self.cost.fn(a, y)/len(data)
             cost += 0.5*(lmbda/len(data))*sum(np.linalg.norm(w)**2 for w in self.weights) # '**' - to the power of.
@@ -345,7 +351,7 @@ def vectorized_result(j):
     """Return a 10-dimensional unit vector with a 1.0 in the j'th position
     and zeroes elsewhere.  This is used to convert a digit (0...9)
     into a corresponding desired output from the neural network.
-
+    向量化期望输出值，转化为 one-hot 向量
     """
     e = np.zeros((10, 1))
     e[j] = 1.0
